@@ -1,6 +1,6 @@
 let population = [];
 
-const simSpeed = 5;
+const simSpeed = 3;
 const personSize = 15;
 const optionsHeight = 40;
 const graphHeight = 100;
