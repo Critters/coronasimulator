@@ -1,6 +1,6 @@
 let population = [];
 
-const simSpeed = 4;
+const simSpeed = 5;
 const personSize = 15;
 const optionsHeight = 40;
 const graphHeight = 100;
@@ -13,7 +13,9 @@ const simDuration = 2000;
 
 const color_base = 'rgb(214, 214, 214)';
 const color_recovered = 'rgb(194, 120, 255)';
+const color_recovered_dark = 'rgb(116, 59, 163)';
 const color_infected = 'rgb(255, 10, 59)';
+const color_infected_dark = 'rgb(189, 4, 41)';
 
 let graph;
 let labels;
@@ -48,7 +50,10 @@ function Init() {
 }
 
 function draw() {
-	if (simSteps >= simDuration) Init();
+	if (simSteps >= simDuration) {
+		graph.Snapshot();
+		Init();
+	}
 
 	stroke(1);
 	fill(100);
@@ -123,44 +128,102 @@ class Labels {
 class Graph {
 	constructor() {
 		this.step;
+		this.infectedData;
+		this.recoveredData;
+		this.infectedSnapshot = [];
+		this.recoveredSnapshot = [];
+		this.infectedAverage = [];
+		this.recoveredAverage = [];
 	}
 
 	Init() {
-		stroke(1);
-		fill(200);
-		rect(0, optionsHeight, width, graphHeight);
 		this.oldInfected = 0;
 		this.oldRecovered = 0;
 		this.step = 0;
 		this.stepSize = width / simDuration * simSpeed;
+		this.infectedData = [];
+		this.recoveredData = [];
+		this.DrawSnapshot();
 	}
 
 	AddPoint() {
+		this.infectedData.push(infectedCount);
+		this.recoveredData.push(recoveredCount);
+
+		stroke(1);
+		fill(200);
+		rect(0, optionsHeight, width, graphHeight);
+
 		this.step++;
-		stroke(100);
-		line(this.step * this.stepSize, optionsHeight, this.step * this.stepSize, graphHeight + optionsHeight);
-
 		rectMode(CORNERS);
+		for (let i = 0; i < this.infectedData.length; i++) {
+			stroke(color(color_infected));
+			fill(color(color_infected));
+			rect(
+				i * this.stepSize,
+				graphHeight + optionsHeight,
+				(i + 1) * this.stepSize,
+				graphHeight + optionsHeight - this.infectedData[i]
+			);
 
-		stroke(color(color_infected));
-		fill(color(color_infected));
-		rect(
-			this.step * this.stepSize,
-			graphHeight + optionsHeight,
-			(this.step + 1) * this.stepSize,
-			graphHeight + optionsHeight - infectedCount
-		);
-
-		stroke(color(color_recovered));
-		fill(color(color_recovered));
-		rect(this.step * this.stepSize, optionsHeight, (this.step + 1) * this.stepSize, recoveredCount + optionsHeight);
-
+			stroke(color(color_recovered));
+			fill(color(color_recovered));
+			rect(i * this.stepSize, optionsHeight, (i + 1) * this.stepSize, this.recoveredData[i] + optionsHeight);
+		}
 		rectMode(CORNER);
 
 		stroke(0);
 		stroke(0);
 		fill(0, 0, 0, 0);
 		rect(0, optionsHeight, width, graphHeight + optionsHeight);
+		this.DrawSnapshot();
+	}
+
+	Snapshot() {
+		this.infectedSnapshot.push(this.infectedData);
+		this.recoveredSnapshot.push(this.recoveredData);
+		if (this.infectedSnapshot.length > 4) {
+			this.infectedSnapshot.splice(0, 1);
+			this.recoveredSnapshot.splice(0, 1);
+		}
+		const L = this.infectedSnapshot.length;
+		if (L > 0) {
+			this.infectedAverage = [];
+			this.recoveredAverage = [];
+			for (let i = 0; i < L; i++) {
+				for (let n = 0; n < this.infectedSnapshot[i].length; n++) {
+					if (i == 0) {
+						this.infectedAverage.push(this.infectedSnapshot[i][n] / L);
+						this.recoveredAverage.push(this.recoveredSnapshot[i][n] / L);
+					} else {
+						this.infectedAverage[n] += this.infectedSnapshot[i][n] / L;
+						this.recoveredAverage[n] += this.recoveredSnapshot[i][n] / L;
+					}
+				}
+			}
+		}
+	}
+
+	DrawSnapshot() {
+		if (!this.infectedAverage) return;
+		stroke(color(color_infected_dark));
+		for (let i = 1; i < this.infectedAverage.length; i++) {
+			line(
+				(i - 1) * this.stepSize,
+				graphHeight + optionsHeight - this.infectedAverage[i - 1],
+				i * this.stepSize,
+				graphHeight + optionsHeight - this.infectedAverage[i]
+			);
+		}
+		stroke(color(color_recovered_dark));
+		for (let i = 1; i < this.recoveredAverage.length; i++) {
+			line(
+				(i - 1) * this.stepSize,
+				optionsHeight + this.recoveredAverage[i - 1],
+				i * this.stepSize,
+				optionsHeight + this.recoveredAverage[i]
+			);
+		}
 	}
 }
 
